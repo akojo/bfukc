@@ -80,22 +80,18 @@ let optimize program =
   program |> contract [] |> compact_loops []
 
 let run buf program =
-  let limit x =
-    let x = x mod 256 in
-    if x < 0 then 256 + x else x
-  in
   let rec loop pc i =
     let open Bytecode in
     match program.(pc) with
     | Halt -> ()
-    | Add n -> buf.(i) <- limit (buf.(i) + n); loop (pc + 1) i
+    | Add n -> buf.(i) <- (buf.(i) + n) land 0xff; loop (pc + 1) i
     | Move n -> loop (pc + 1) (i + n)
     | In -> read pc i
     | Out -> Out_channel.output_char stdout (Char.of_int_exn buf.(i)); loop (pc + 1) i
-    | Jeqz n -> if buf.(i) = 0 then loop n i  else loop (pc + 1) i
-    | Jnez n -> if buf.(i) <> 0 then loop n i  else loop (pc + 1) i
+    | Jeqz n -> if buf.(i) = 0 then loop n i else loop (pc + 1) i
+    | Jnez n -> if buf.(i) <> 0 then loop n i else loop (pc + 1) i
     | Clear -> buf.(i) <- 0; loop (pc + 1) i
-    | Mul (x, y) -> buf.(i + x) <- limit (buf.(i + x) + buf.(i) * y); loop (pc + 1) i
+    | Mul (x, y) -> buf.(i + x) <- (buf.(i + x) + buf.(i) * y) land 0xff; loop (pc + 1) i
   and read pc i =
     match In_channel.input_char stdin with
     | None -> ()
