@@ -50,6 +50,17 @@ let compile program =
   in
   loop 0 [] program
 
+let optimize program =
+  let open Program in
+  let rec loop program optimized =
+    match program with
+    | Add x :: Add y :: rest -> loop (Add (x + y) :: rest) optimized
+    | Move x :: Move y :: rest -> loop (Move (x + y) :: rest) optimized
+    | ins :: rest -> loop rest (ins :: optimized)
+    | [] -> List.rev optimized
+  in
+  loop program []
+
 let run buf program =
   let add x y =
     let sum = (x + y) mod 256 in
@@ -74,5 +85,5 @@ let run buf program =
   loop 0 0
 
 let () =
-  let () = read_program stdin |> compile |> run (Array.create ~len:131072 0) in
+  let () = read_program stdin |> optimize |> compile |> run (Array.create ~len:131072 0) in
   Out_channel.flush stdout
