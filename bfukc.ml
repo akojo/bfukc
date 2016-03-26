@@ -1,11 +1,15 @@
 open Core.Std
 
 module Program = struct
-  type op = Add of int | Move of int | In | Out | Open | Close
+  type op =
+    | Add of int | Move of int | In | Out | Open | Close
+    | Clear | Mul of int * int
 end
 
 module Bytecode = struct
-  type t = Halt | Add of int | Move of int | In | Out | Jeqz of int | Jnez of int
+  type t =
+    | Halt | Add of int | Move of int | In | Out | Jeqz of int | Jnez of int
+    | Clear | Mul of int * int
 end
 
 let read_program chan =
@@ -40,6 +44,8 @@ let compile program =
     | Program.Close ->
       let idx, stack = pop stack in
       code.(idx) <- Jeqz (i + 1); code.(i) <- Jnez idx; stack
+    | Program.Clear -> code.(i) <- Clear; stack
+    | Program.Mul (x, y) -> code.(i) <- Mul (x, y); stack
   in
   let rec loop i stack instrs =
     match instrs with
@@ -52,31 +58,44 @@ let compile program =
 
 let optimize program =
   let open Program in
-  let rec loop program optimized =
+  let rec contract optimized program =
     match program with
-    | Add x :: Add y :: rest -> loop (Add (x + y) :: rest) optimized
-    | Move x :: Move y :: rest -> loop (Move (x + y) :: rest) optimized
-    | ins :: rest -> loop rest (ins :: optimized)
+    | Add x :: Add y :: rest -> contract optimized (Add (x + y) :: rest)
+    | Move x :: Move y :: rest -> contract optimized (Move (x + y) :: rest)
+    | ins :: rest -> contract (ins :: optimized) rest
     | [] -> List.rev optimized
   in
-  loop program []
+  let rec compact_loops optimized program =
+    match program with
+    | Open :: Add x :: Close :: rest when x = -1 || x = 1 ->
+        compact_loops (Clear :: optimized) rest
+    | Open :: Add n0 :: Move p1 :: Add n1 :: Move p2 :: Close :: rest when (n0 = 1 || n0 = -1) && p1 = -p2 ->
+        compact_loops (Clear :: Mul (p1, n1) :: optimized) rest
+    | Open :: Add n0 :: Move p1 :: Add n1 :: Move p2 :: Add n2 :: Move p3 :: Close :: rest when
+      (n0 = 1 || n0 = -1) && p1 + p2 = -p3 ->
+        compact_loops (Clear :: Mul (p1 + p2, n2) :: Mul (p1, n1) :: optimized) rest
+    | ins :: rest -> compact_loops (ins :: optimized) rest
+    | [] -> List.rev optimized
+  in
+  program |> contract [] |> compact_loops []
 
 let run buf program =
-  let add x y =
-    let sum = (x + y) mod 256 in
-    if sum < 0 then 256 + sum
-    else sum
+  let limit x =
+    let x = x mod 256 in
+    if x < 0 then 256 + x else x
   in
   let rec loop pc i =
     let open Bytecode in
     match program.(pc) with
     | Halt -> ()
-    | Add n -> buf.(i) <- add buf.(i) n; loop (pc + 1) i
+    | Add n -> buf.(i) <- limit (buf.(i) + n); loop (pc + 1) i
     | Move n -> loop (pc + 1) (i + n)
     | In -> read pc i
     | Out -> Out_channel.output_char stdout (Char.of_int_exn buf.(i)); loop (pc + 1) i
     | Jeqz n -> if buf.(i) = 0 then loop n i  else loop (pc + 1) i
     | Jnez n -> if buf.(i) <> 0 then loop n i  else loop (pc + 1) i
+    | Clear -> buf.(i) <- 0; loop (pc + 1) i
+    | Mul (x, y) -> buf.(i + x) <- limit (buf.(i + x) + buf.(i) * y); loop (pc + 1) i
   and read pc i =
     match In_channel.input_char stdin with
     | None -> ()
