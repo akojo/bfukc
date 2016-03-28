@@ -36,7 +36,14 @@ let compile ch tape_size program =
     fprintf ch "  %s = getelementptr inbounds i8, i8* %s, i64 %d\n" r2 r1 n;
     fprintf ch "  store i8* %s, i8** %%p\n\n" r2
   in
-  let emit_in () = ()
+  let emit_in () =
+    let r1 = alloc_reg () in
+    let r2 = alloc_reg () in
+    let r3 = alloc_reg () in
+    fprintf ch "  %s = call i32 @getchar()\n" r1;
+    fprintf ch "  %s = trunc i32 %s to i8\n" r2 r1;
+    fprintf ch "  %s = load i8*, i8** %%p\n" r3;
+    fprintf ch "  store i8 %s, i8* %s\n\n" r2 r3;
   in
   let emit_out () =
     let r1 = alloc_reg () in
