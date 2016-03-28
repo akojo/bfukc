@@ -17,8 +17,6 @@ let compile ch tape_size program =
   let emit_header tape_size =
     fprintf ch "@tape = internal global [%d x i8] zeroinitializer\n\n" tape_size;
     fprintf ch "define i32 @main() #0 {\n";
-    fprintf ch "  %%zero = alloca i8\n";
-    fprintf ch "  store i8 0, i8* %%zero\n";
     fprintf ch "  %%p = alloca i8*\n";
     fprintf ch "  store i8* getelementptr inbounds ([%d x i8], [%d x i8]* @tape, i32 0, i32 0), i8** %%p\n\n" tape_size tape_size;
   in
@@ -90,11 +88,7 @@ let compile ch tape_size program =
     fprintf ch "  store i8 %s, i8* %s\n\n" r7 r5
   in
   let emit_footer () =
-    let r1 = alloc_reg () in
-    let r2 = alloc_reg () in
-    fprintf ch "  %s = load i8, i8* %%zero\n" r1;
-    fprintf ch "  %s = zext i8 %s to i32\n" r2 r1;
-    fprintf ch "  ret i32 %s\n" r2;
+    fprintf ch "  ret i32 0\n";
     fprintf ch "}\n\n";
     fprintf ch "declare i32 @getchar() #1\n";
     fprintf ch "declare i32 @putchar(i32) #2\n"
