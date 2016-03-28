@@ -54,27 +54,17 @@ let compile ch tape_size program =
     let r1 = alloc_reg () in
     let r2 = alloc_reg () in
     let r3 = alloc_reg () in
-    let r4 = alloc_reg () in
-    let l_true = alloc_label () in
+    let l_false = alloc_label () in
     fprintf ch "  br label %%%s\n" l_open;
     fprintf ch "%s:\n" l_open;
     fprintf ch "  %s = load i8*, i8** %%p\n" r1;
     fprintf ch "  %s = load i8, i8* %s\n" r2 r1;
-    fprintf ch "  %s = zext i8 %s to i32\n" r3 r2;
-    fprintf ch "  %s = icmp eq i32 %s, 0\n" r4 r3;
-    fprintf ch "  br i1 %s, label %%%s, label %%%s\n" r4 l_close l_true;
-    fprintf ch "%s:\n\n" l_true
+    fprintf ch "  %s = icmp eq i8 %s, 0\n" r3 r2;
+    fprintf ch "  br i1 %s, label %%%s, label %%%s\n" r3 l_close l_false;
+    fprintf ch "%s:\n\n" l_false
   in
   let emit_close l_open l_close =
-    let r1 = alloc_reg () in
-    let r2 = alloc_reg () in
-    let r3 = alloc_reg () in
-    let r4 = alloc_reg () in
-    fprintf ch "  %s = load i8*, i8** %%p\n" r1;
-    fprintf ch "  %s = load i8, i8* %s\n" r2 r1;
-    fprintf ch "  %s = zext i8 %s to i32\n" r3 r2;
-    fprintf ch "  %s = icmp ne i32 %s, 0\n" r4 r3;
-    fprintf ch "  br i1 %s, label %%%s, label %%%s\n" r4 l_open l_close;
+    fprintf ch "  br label %%%s\n" l_open;
     fprintf ch "%s:\n\n" l_close
   in
   let emit_clear () =
@@ -97,7 +87,7 @@ let compile ch tape_size program =
     fprintf ch "  %s = getelementptr inbounds i8, i8* %s, i64 %d\n" r5 r4 x;
     fprintf ch "  %s = load i8, i8* %s\n" r6 r5;
     fprintf ch "  %s = add i8 %s, %s\n" r7 r6 r3;
-    fprintf ch "  store i8 %s, i8* %s\n" r7 r5
+    fprintf ch "  store i8 %s, i8* %s\n\n" r7 r5
   in
   let emit_footer () =
     let r1 = alloc_reg () in

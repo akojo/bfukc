@@ -1,7 +1,7 @@
 open Core.Std
 
 type t =
-  | Halt | Add of int | Move of int | In | Out | Jeqz of int | Jnez of int
+  | Halt | Add of int | Move of int | In | Out | Jeqz of int | Jmp of int
   | Clear | Mul of int * int
 
 let compile program =
@@ -18,7 +18,7 @@ let compile program =
     | Compiler.Open -> code.(i) <- Jeqz 0; i :: stack
     | Compiler.Close ->
       let idx, stack = pop stack in
-      code.(idx) <- Jeqz (i + 1); code.(i) <- Jnez idx; stack
+      code.(idx) <- Jeqz (i + 1); code.(i) <- Jmp idx; stack
     | Compiler.Clear -> code.(i) <- Clear; stack
     | Compiler.Mul (x, y) -> code.(i) <- Mul (x, y); stack
   in
@@ -42,7 +42,7 @@ let run tape_size program =
     | In -> read pc i
     | Out -> Out_channel.output_char stdout (Char.of_int_exn tape.(i)); loop (pc + 1) i
     | Jeqz n -> if tape.(i) = 0 then loop n i else loop (pc + 1) i
-    | Jnez n -> if tape.(i) <> 0 then loop n i else loop (pc + 1) i
+    | Jmp n -> loop n i
     | Clear -> tape.(i) <- 0; loop (pc + 1) i
     | Mul (x, y) -> tape.(i + x) <- (tape.(i + x) + tape.(i) * y) land 0xff; loop (pc + 1) i
   and read pc i =
