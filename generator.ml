@@ -133,6 +133,5 @@ let run program_file tape_size program =
     compile ch tape_size program
   ) ~f:(fun filename ->
     let outfile = Filename.chop_extension program_file in
-    let output = Shell.run_full "clang" ["-Wno-override-module"; "-Os"; "-o"; outfile; filename] in
-    printf "%s" output
+    Shell.run "clang" ["-Wno-override-module"; "-Os"; "-o"; outfile; filename]
   ) "bfukc" ".ll"
