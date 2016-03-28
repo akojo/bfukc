@@ -31,22 +31,24 @@ let compile program =
   in
   loop 0 [] program
 
-let run buf program =
+let run tape_size program =
+  let tape = Array.create ~len:tape_size 0 in
+  let bytecode = compile program in
   let rec loop pc i =
-    match program.(pc) with
+    match bytecode.(pc) with
     | Halt -> ()
-    | Add n -> buf.(i) <- (buf.(i) + n) land 0xff; loop (pc + 1) i
+    | Add n -> tape.(i) <- (tape.(i) + n) land 0xff; loop (pc + 1) i
     | Move n -> loop (pc + 1) (i + n)
     | In -> read pc i
-    | Out -> Out_channel.output_char stdout (Char.of_int_exn buf.(i)); loop (pc + 1) i
-    | Jeqz n -> if buf.(i) = 0 then loop n i else loop (pc + 1) i
-    | Jnez n -> if buf.(i) <> 0 then loop n i else loop (pc + 1) i
-    | Clear -> buf.(i) <- 0; loop (pc + 1) i
-    | Mul (x, y) -> buf.(i + x) <- (buf.(i + x) + buf.(i) * y) land 0xff; loop (pc + 1) i
+    | Out -> Out_channel.output_char stdout (Char.of_int_exn tape.(i)); loop (pc + 1) i
+    | Jeqz n -> if tape.(i) = 0 then loop n i else loop (pc + 1) i
+    | Jnez n -> if tape.(i) <> 0 then loop n i else loop (pc + 1) i
+    | Clear -> tape.(i) <- 0; loop (pc + 1) i
+    | Mul (x, y) -> tape.(i + x) <- (tape.(i + x) + tape.(i) * y) land 0xff; loop (pc + 1) i
   and read pc i =
     match In_channel.input_char stdin with
     | None -> ()
-    | Some ch -> buf.(i) <- Char.to_int ch; loop (pc + 1) i
+    | Some ch -> tape.(i) <- Char.to_int ch; loop (pc + 1) i
   in
   loop 0 0
 
