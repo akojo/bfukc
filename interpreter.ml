@@ -31,7 +31,7 @@ let compile program =
   in
   loop 0 [] program
 
-let run tape_size program =
+let run _ tape_size program =
   let tape = Array.create ~len:tape_size 0 in
   let bytecode = compile program in
   let rec loop pc i =

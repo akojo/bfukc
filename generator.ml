@@ -128,10 +128,11 @@ let compile ch tape_size program =
   in
   emit_header tape_size; loop [] program; emit_footer ()
 
-let run tape_size program =
+let run program_file tape_size program =
   Filename.with_open_temp_file ~write:(fun ch ->
     compile ch tape_size program
   ) ~f:(fun filename ->
-    let output = Shell.run_full "clang" ["-Wno-override-module"; "-Os"; filename] in
+    let outfile = Filename.chop_extension program_file in
+    let output = Shell.run_full "clang" ["-Wno-override-module"; "-Os"; "-o"; outfile; filename] in
     printf "%s" output
   ) "bfukc" ".ll"
